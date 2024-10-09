@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
+import axios from 'axios'; // Import Axios
 
 function App() {
     const [input, setInput] = useState('');
-    const [response, setResponse] = useState('');
+    const [response, setResponse] = useState(''); // This is where the API response is stored
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null); // New state to store error
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [history, setHistory] = useState([]);
     const [uploadedFiles, setUploadedFiles] = useState([]); // State for uploaded files
@@ -15,24 +17,43 @@ function App() {
         document.title = "LLM Demo";
     }, []);
 
-    const handleSubmit = (e) => {
+    // Updated handleSubmit to call the C# API
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
+        setError(null); // Reset error state before new request
 
-        setTimeout(() => {
-            const mockResponse = 'This is a mock response from the LLM.';
-            setResponse(mockResponse);
+        try {
+            // Call the C# API with the user input
+            const apiResponse = await axios.post("http://localhost:5288/generate", {
+                prompt: input,
+            });
+
+            const apiResponseText = apiResponse.data.generated_text;
+            setResponse(apiResponseText); // Set the response to be shown
             setHistory((prevHistory) => [
                 ...prevHistory,
-                { input, response: mockResponse },
+                { input, response: apiResponseText },
             ]);
-            setLoading(false);
-            setInput('');
+
+            setInput(''); // Clear input field
 
             if (historyRef.current) {
                 historyRef.current.scrollTop = historyRef.current.scrollHeight;
             }
-        }, 500);
+        } catch (error) {
+            console.error("Error calling the API:", error);
+            
+            // Check if the error has a response and handle the detailed message
+            if (error.response && error.response.data && error.response.data.details) {
+                setError(error.response.data.details); // Set detailed error message
+            } else {
+                setError("An unexpected error occurred."); // Default error message
+            }
+            setResponse('Error calling the API.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const toggleSidebar = () => {
@@ -47,22 +68,18 @@ function App() {
     // Handle file upload
     const handleUpload = () => {
         if (file) {
-            // Add the file to the uploaded files state
             setUploadedFiles((prevFiles) => [...prevFiles, file]);
-            // Reset the file input
-            setFile(null);
-            // Optionally, you can also handle the actual file upload logic here (e.g., send it to a server)
+            setFile(null); // Reset the file input
             console.log("File uploaded:", file.name);
         }
     };
 
     // Handle file download
     const handleDownload = (fileName) => {
-        // Create a link element
         const link = document.createElement('a');
-        link.href = URL.createObjectURL(uploadedFiles.find(f => f.name === fileName)); // Create an object URL for the file
-        link.download = fileName; // Set the file name for the download
-        link.click(); // Trigger the download
+        link.href = URL.createObjectURL(uploadedFiles.find(f => f.name === fileName));
+        link.download = fileName;
+        link.click();
     };
 
     return (
@@ -91,7 +108,7 @@ function App() {
                                         <button onClick={() => window.open(URL.createObjectURL(file), '_blank')}>View</button>
                                     </div>
                                 </li>
-                            ))}
+                            ))} 
                         </ul>
                     </aside>
                 )}
@@ -120,6 +137,22 @@ function App() {
                             {loading ? 'Loading...' : 'Submit'}
                         </button>
                     </form>
+
+                    {/* Display the current response below the form */}
+                    {response && (
+                        <div className="response-box">
+                            <h4>Response:</h4>
+                            <p>{response}</p>
+                        </div>
+                    )}
+
+                    {/* Display error message if exists */}
+                    {error && (
+                        <div className="error-box">
+                            <h4>Error:</h4>
+                            <p>{error}</p>
+                        </div>
+                    )}
                 </main>
             </div>
         </div>
