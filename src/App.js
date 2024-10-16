@@ -19,7 +19,7 @@ function App() {
         e.preventDefault();
         setLoading(true);
 
-        fetch('https://llmtestf5-fc10e839eff7.herokuapp.com/search', {
+        fetch('http://localhost:5000/search', {  // Local Flask URL
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -61,7 +61,7 @@ function App() {
             const formData = new FormData();
             formData.append('file', file); // Add the file to the formData
 
-            fetch('https://llmtestf5-fc10e839eff7.herokuapp.com/upload', {
+            fetch('http://localhost:5000/upload', {  // Local Flask URL
                 method: 'POST',
                 body: formData,
             })
