@@ -1,0 +1,1 @@
+how to change the background in imshow from black to white

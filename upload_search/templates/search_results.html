@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Search Results</title>
+  </head>
+  <body>
+    <h1>Search Results</h1>
+
+    <!-- 如果搜索有结果，显示结果 -->
+    {% if results %}
+    <ul>
+      {% for title, content in results %}
+        <li><strong>{{ title }}</strong><br>{{ content }}</li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p>No results found for the keyword.</p>
+    {% endif %}
+
+    <!-- 返回搜索页面链接 -->
+    <a href="/search">Back to Search</a>
+  </body>
+</html>
