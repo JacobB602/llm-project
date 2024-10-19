@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { FiSettings } from 'react-icons/fi'; // Import settings icon
 import './App.css';
 
 function App() {
@@ -9,11 +10,12 @@ function App() {
     const [history, setHistory] = useState([]);
     const [uploadedFiles, setUploadedFiles] = useState([]); // State for uploaded files
     const [file, setFile] = useState(null); // State for selected file
+    const [settingsOpen, setSettingsOpen] = useState(false); // State for settings panel
+    const [spinning, setSpinning] = useState(false); // State to trigger spin animation
+    const [selectedModel, setSelectedModel] = useState('model1'); // Default model
+    const [confirmedModel, setConfirmedModel] = useState(selectedModel); // Confirmed model state
+    const [loadingModel, setLoadingModel] = useState(false); // Loading state for model switching
     const historyRef = useRef(null);
-
-    useEffect(() => {
-        document.title = "LLM Demo";
-    }, []);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -35,8 +37,25 @@ function App() {
         }, 500);
     };
 
+    const handleKeyDown = (e) => {
+        if (input.trim() === '') { // If the input is empty
+            if (e.key === 'Enter') {
+                e.preventDefault(); // Prevent new line
+            }
+        } else if (e.key === 'Enter' && !e.shiftKey) { // Check for Enter key and not Shift key
+            e.preventDefault(); // Prevent new line
+            handleSubmit(e); // Call the submit handler
+        }
+    };
+
     const toggleSidebar = () => {
         setSidebarOpen((prevState) => !prevState);
+    };
+
+    const toggleSettings = () => {
+        setSettingsOpen((prevState) => !prevState);
+        setSpinning(true); // Trigger the spin animation
+        setTimeout(() => setSpinning(false), 500); // Stop spinning after 0.5s
     };
 
     // Handle file input change
@@ -47,26 +66,41 @@ function App() {
     // Handle file upload
     const handleUpload = () => {
         if (file) {
-            // Add the file to the uploaded files state
             setUploadedFiles((prevFiles) => [...prevFiles, file]);
-            // Reset the file input
             setFile(null);
-            // Optionally, you can also handle the actual file upload logic here (e.g., send it to a server)
             console.log("File uploaded:", file.name);
         }
     };
 
     // Handle file download
     const handleDownload = (fileName) => {
-        // Create a link element
         const link = document.createElement('a');
-        link.href = URL.createObjectURL(uploadedFiles.find(f => f.name === fileName)); // Create an object URL for the file
-        link.download = fileName; // Set the file name for the download
-        link.click(); // Trigger the download
+        link.href = URL.createObjectURL(uploadedFiles.find(f => f.name === fileName));
+        link.download = fileName;
+        link.click();
+    };
+
+    // Confirm model change
+    const confirmModelChange = () => {
+        setLoadingModel(true); // Start loading
+        setTimeout(() => {
+            setConfirmedModel(selectedModel);
+            setLoadingModel(false); // End loading
+            console.log(`Switched to ${selectedModel}`); // Placeholder for actual model switching logic
+        }, 2000); // Simulate loading time
     };
 
     return (
         <div className="App">
+            {loadingModel && (
+                <div className="loading-overlay">
+                    <div className="loading-message">
+                        <p>Switching to {selectedModel}</p>
+                        <p>Please wait...</p>
+                    </div>
+                </div>
+            )}
+
             <header className="App-header">
                 <button onClick={toggleSidebar} className="Sidebar-toggle">
                     <span className="Sidebar-icon"></span>
@@ -74,6 +108,12 @@ function App() {
                     <span className="Sidebar-icon"></span>
                 </button>
                 <h1>LLM Chat Website</h1>
+                <FiSettings
+                    className={`settings-icon ${spinning ? 'spin' : ''}`}
+                    size={24}
+                    onClick={toggleSettings}
+                    title="Settings"
+                />
             </header>
             <div className="App-container">
                 {sidebarOpen && (
@@ -95,6 +135,19 @@ function App() {
                         </ul>
                     </aside>
                 )}
+
+                {settingsOpen && (
+                    <div className="settings-panel">
+                        <h3>Choose LLM Model</h3>
+                        <select value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)}>
+                            <option value="model1">Model 1</option>
+                            <option value="model2">Model 2</option>
+                            <option value="model3">Model 3</option>
+                        </select>
+                        <button onClick={confirmModelChange} className="confirm-button">Confirm</button>
+                    </div>
+                )}
+
                 <main className="Main-content">
                     <div className="history" ref={historyRef}>
                         <h3>History:</h3>
@@ -111,6 +164,7 @@ function App() {
                         <textarea
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
+                            onKeyDown={handleKeyDown} // Add key down event handler
                             placeholder="Ask a question..."
                             rows="4"
                             cols="50"
