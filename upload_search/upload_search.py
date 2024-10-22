@@ -1,5 +1,6 @@
 ﻿import os
-import openai
+#import openai
+from langchain_ollama import OllamaEmbeddings
 import psycopg2
 from flask import Flask, request, jsonify, render_template
 from werkzeug.utils import secure_filename
@@ -7,11 +8,13 @@ from docx import Document  # To handle docx files
 import PyPDF2  # To handle pdf files
 from flask_cors import CORS  # To handle cross-origin requests (if needed)
 
+'''
 # Set the OpenAI API key directly
 openai.api_key = "sk-dpbAKJNHdACCK000MuElEc3hhYl9GcSSpKmlcwXBasT3BlbkFJ855J3NM8qaLKed-u8D4F6N_WqpZkKbHZXbLqnIh_wA"
+'''
 
 # Database connection (using local PostgreSQL with your credentials)
-DATABASE_URL = "postgresql://postgres:spc123@localhost:5432/llm"
+DATABASE_URL = "postgresql://postgres:projectllm@localhost:5432/llm"
 conn = psycopg2.connect(DATABASE_URL)
 cursor = conn.cursor()
 
@@ -19,7 +22,16 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS if needed
 app.config['UPLOAD_FOLDER'] = 'uploads'
 
+ollama_embeddings = OllamaEmbeddings(
+    model="all-minilm",  # Specify the model hosted on Docker
+)
+
 # Function to extract text embedding using OpenAI
+def get_embedding(text):
+    embedding = ollama_embeddings.embed_query(text)
+    return embedding
+
+'''
 def get_embedding(text):
     response = openai.Embedding.create(
         model="text-embedding-ada-002", 
@@ -27,6 +39,7 @@ def get_embedding(text):
     )
     embedding = response['data'][0]['embedding']
     return embedding
+'''
 
 # Function to extract text from docx files
 def extract_text_from_docx(filepath):
