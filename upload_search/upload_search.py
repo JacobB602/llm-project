@@ -7,14 +7,38 @@ from docx import Document  # To handle docx files
 import PyPDF2  # To handle pdf files
 from flask_cors import CORS  # To handle cross-origin requests (if needed)
 
+
+import numpy as np
+from psycopg2.extensions import register_adapter, AsIs
+from pgvector.psycopg2 import register_vector
+
 '''
-# Set the OpenAI API key directly
-openai.api_key = "sk-dpbAKJNHdACCK000MuElEc3hhYl9GcSSpKmlcwXBasT3BlbkFJ855J3NM8qaLKed-u8D4F6N_WqpZkKbHZXbLqnIh_wA"
+def adapt_numpy_float64(numpy_float64):
+    return AsIs(numpy_float64)
+
+def adapt_numpy_int64(numpy_int64):
+    return AsIs(numpy_int64)
+
+def adapt_numpy_float32(numpy_float32):
+    return AsIs(numpy_float32)
+
+def adapt_numpy_int32(numpy_int32):
+    return AsIs(numpy_int32)
+
+def adapt_numpy_array(numpy_array):
+    return AsIs(tuple(numpy_array))
+
+register_adapter(np.float64, adapt_numpy_float64)
+register_adapter(np.int64, adapt_numpy_int64)
+register_adapter(np.float32, adapt_numpy_float32)
+register_adapter(np.int32, adapt_numpy_int32)
+register_adapter(np.ndarray, adapt_numpy_array)
 '''
 
 # Database connection (using local PostgreSQL with your credentials)
 DATABASE_URL = "postgresql://postgres:projectllm@localhost:5432/llm"
 conn = psycopg2.connect(DATABASE_URL)
+register_vector(conn)
 cursor = conn.cursor()
 
 app = Flask(__name__)
