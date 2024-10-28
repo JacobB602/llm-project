@@ -1,50 +1,64 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FiSettings } from 'react-icons/fi'; // Import settings icon
+import { FiSettings, FiClock, FiX, FiTrash2 } from 'react-icons/fi';
 import './App.css';
 
 function App() {
     const [input, setInput] = useState('');
-    const [response, setResponse] = useState('');
     const [loading, setLoading] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [history, setHistory] = useState([]);
-    const [uploadedFiles, setUploadedFiles] = useState([]); // State for uploaded files
-    const [file, setFile] = useState(null); // State for selected file
-    const [settingsOpen, setSettingsOpen] = useState(false); // State for settings panel
-    const [spinning, setSpinning] = useState(false); // State to trigger spin animation
-    const [selectedModel, setSelectedModel] = useState('model1'); // Default model
-    const [confirmedModel, setConfirmedModel] = useState(selectedModel); // Confirmed model state
-    const [loadingModel, setLoadingModel] = useState(false); // Loading state for model switching
+    const [activeConversation, setActiveConversation] = useState([]);
+    const [uploadedFiles, setUploadedFiles] = useState([]);
+    const [file, setFile] = useState(null);
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [spinning, setSpinning] = useState(false);
+    const [selectedModel, setSelectedModel] = useState('model1');
+    const [confirmedModel, setConfirmedModel] = useState(selectedModel);
+    const [loadingModel, setLoadingModel] = useState(false);
+    const [pastConversations, setPastConversations] = useState([]);
+    const [historyOpen, setHistoryOpen] = useState(false);
+    const [currentConversationId, setCurrentConversationId] = useState(null);
+
     const historyRef = useRef(null);
+
+    useEffect(() => {
+        const storedConversations = JSON.parse(localStorage.getItem('conversations')) || [];
+        setPastConversations(storedConversations);
+    }, []);
+
+    useEffect(() => {
+        if (historyRef.current) {
+            historyRef.current.scrollTop = historyRef.current.scrollHeight;
+        }
+    }, [activeConversation]);
+
+    useEffect(() => {
+        const newConversationId = new Date().toISOString();
+        setCurrentConversationId(newConversationId);
+        setActiveConversation([]);
+    }, []);
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        setLoading(true);
+        if (!input.trim()) return;
 
+        setLoading(true);
         setTimeout(() => {
             const mockResponse = 'This is a mock response from the LLM.';
-            setResponse(mockResponse);
-            setHistory((prevHistory) => [
-                ...prevHistory,
-                { input, response: mockResponse },
-            ]);
+            const newMessage = { input, response: mockResponse };
+
+            const updatedConversation = [...activeConversation, newMessage];
+            setActiveConversation(updatedConversation);
+            updateCurrentConversationInLocalStorage(updatedConversation);
+
             setLoading(false);
             setInput('');
-
-            if (historyRef.current) {
-                historyRef.current.scrollTop = historyRef.current.scrollHeight;
-            }
         }, 500);
     };
 
     const handleKeyDown = (e) => {
-        if (input.trim() === '') { // If the input is empty
-            if (e.key === 'Enter') {
-                e.preventDefault(); // Prevent new line
-            }
-        } else if (e.key === 'Enter' && !e.shiftKey) { // Check for Enter key and not Shift key
-            e.preventDefault(); // Prevent new line
-            handleSubmit(e); // Call the submit handler
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSubmit(e);
         }
     };
 
@@ -54,16 +68,15 @@ function App() {
 
     const toggleSettings = () => {
         setSettingsOpen((prevState) => !prevState);
-        setSpinning(true); // Trigger the spin animation
-        setTimeout(() => setSpinning(false), 500); // Stop spinning after 0.5s
+        setSpinning(true);
+        setTimeout(() => setSpinning(false), 500);
     };
 
-    // Handle file input change
+    // File handling functions
     const handleFileChange = (e) => {
-        setFile(e.target.files[0]); // Get the selected file
+        setFile(e.target.files[0]);
     };
 
-    // Handle file upload
     const handleUpload = () => {
         if (file) {
             setUploadedFiles((prevFiles) => [...prevFiles, file]);
@@ -72,7 +85,6 @@ function App() {
         }
     };
 
-    // Handle file download
     const handleDownload = (fileName) => {
         const link = document.createElement('a');
         link.href = URL.createObjectURL(uploadedFiles.find(f => f.name === fileName));
@@ -80,14 +92,46 @@ function App() {
         link.click();
     };
 
-    // Confirm model change
     const confirmModelChange = () => {
-        setLoadingModel(true); // Start loading
-        setTimeout(() => {
-            setConfirmedModel(selectedModel);
-            setLoadingModel(false); // End loading
-            console.log(`Switched to ${selectedModel}`); // Placeholder for actual model switching logic
-        }, 2000); // Simulate loading time
+        const userConfirmed = window.confirm(`Are you sure you want to switch to ${selectedModel}?`);
+        if (userConfirmed) {
+            setLoadingModel(true);
+            setTimeout(() => {
+                setConfirmedModel(selectedModel);
+                setLoadingModel(false);
+                console.log(`Switched to ${selectedModel}`);
+            }, 3000);
+        }
+    };
+
+    const toggleHistory = () => {
+        setHistoryOpen((prev) => !prev);
+    };
+
+    const loadConversation = (conversation) => {
+        setActiveConversation(conversation);
+        setHistoryOpen(false);
+    };
+
+    const deleteConversation = (index) => {
+        const updatedConversations = pastConversations.filter((_, i) => i !== index);
+        setPastConversations(updatedConversations);
+        localStorage.setItem('conversations', JSON.stringify(updatedConversations));
+    };
+
+    const updateCurrentConversationInLocalStorage = (conversation) => {
+        const conversationEntry = { id: currentConversationId, conversation };
+        const existingConversations = JSON.parse(localStorage.getItem('conversations')) || [];
+        const existingEntryIndex = existingConversations.findIndex(entry => entry.id === currentConversationId);
+
+        if (existingEntryIndex !== -1) {
+            existingConversations[existingEntryIndex].conversation = conversation;
+        } else {
+            existingConversations.push(conversationEntry);
+        }
+
+        setPastConversations(existingConversations);
+        localStorage.setItem('conversations', JSON.stringify(existingConversations));
     };
 
     return (
@@ -114,7 +158,14 @@ function App() {
                     onClick={toggleSettings}
                     title="Settings"
                 />
+                <FiClock
+                    className="history-icon"
+                    size={24}
+                    onClick={toggleHistory}
+                    title="Conversation History"
+                />
             </header>
+
             <div className="App-container">
                 {sidebarOpen && (
                     <aside className="Sidebar">
@@ -148,11 +199,38 @@ function App() {
                     </div>
                 )}
 
+                {historyOpen && (
+                    <>
+                        <div className="history-overlay" onClick={() => setHistoryOpen(false)} />
+                        <div className="history-modal">
+                            <div className="history-modal-header">
+                                <h3>Past Conversations</h3>
+                                <FiX className="close-history-button" onClick={() => setHistoryOpen(false)} />
+                            </div>
+                            <ul>
+                                {pastConversations.map((item, index) => (
+                                    <li key={index} className="conversation-item" onClick={() => loadConversation(item.conversation)}>
+                                        Conversation from {new Date(item.id).toLocaleString()}
+                                        <FiTrash2
+                                            className="delete-icon"
+                                            onClick={(e) => {
+                                                e.stopPropagation(); // Prevent loading the conversation when clicking the delete icon
+                                                deleteConversation(index);
+                                            }}
+                                            title="Delete conversation"
+                                        />
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </>
+                )}
+
                 <main className="Main-content">
                     <div className="history" ref={historyRef}>
-                        <h3>History:</h3>
+                        <h3>Active Conversation:</h3>
                         <ul>
-                            {history.map((item, index) => (
+                            {activeConversation.map((item, index) => (
                                 <li key={index}>
                                     <strong>Q:</strong> {item.input} <br />
                                     <strong>A:</strong> {item.response}
@@ -164,7 +242,7 @@ function App() {
                         <textarea
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={handleKeyDown} // Add key down event handler
+                            onKeyDown={handleKeyDown}
                             placeholder="Ask a question..."
                             rows="4"
                             cols="50"
